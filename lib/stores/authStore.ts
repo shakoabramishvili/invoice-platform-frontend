@@ -5,8 +5,6 @@ import { authService } from '@/lib/api/auth.service';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -16,7 +14,6 @@ interface AuthActions {
   login: (credentials: LoginFormData) => Promise<void>;
   register: (data: RegisterFormData) => Promise<void>;
   logout: () => Promise<void>;
-  refreshTokens: () => Promise<void>;
   updateUser: (user: User) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -27,8 +24,6 @@ type AuthStore = AuthState & AuthActions;
 
 const initialState: AuthState = {
   user: null,
-  accessToken: null,
-  refreshToken: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -43,26 +38,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authService.login(credentials);
+          console.log('Login response:', response);
+          const { user } = response.data;
 
-          const { accessToken, refreshToken, user } = response.data;
-
-          // Store tokens in localStorage
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-
-          // Store tokens in cookies for middleware
-          document.cookie = `accessToken=${accessToken}; path=/; max-age=86400; SameSite=Strict`;
-          document.cookie = `refreshToken=${refreshToken}; path=/; max-age=604800; SameSite=Strict`;
-
+          // HttpOnly cookies are set by the backend automatically
           set({
             user,
-            accessToken,
-            refreshToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
           });
+          console.log('Auth state updated, user:', user);
         } catch (error: any) {
+          console.error('Login error:', error);
           set({
             error: error.message || 'Login failed',
             isLoading: false,
@@ -76,21 +64,11 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authService.register(data);
+          const { user } = response.data;
 
-          const { accessToken, refreshToken, user } = response.data;
-
-          // Store tokens in localStorage
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-
-          // Store tokens in cookies for middleware
-          document.cookie = `accessToken=${accessToken}; path=/; max-age=86400; SameSite=Strict`;
-          document.cookie = `refreshToken=${refreshToken}; path=/; max-age=604800; SameSite=Strict`;
-
+          // HttpOnly cookies are set by the backend automatically
           set({
             user,
-            accessToken,
-            refreshToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -107,55 +85,15 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: async () => {
         try {
+          // Backend will clear HttpOnly cookies
           await authService.logout();
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
-          // Clear tokens from localStorage
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-
-          // Clear tokens from cookies
-          document.cookie = 'accessToken=; path=/; max-age=0';
-          document.cookie = 'refreshToken=; path=/; max-age=0';
-
+          // Clear auth state
           set({
             ...initialState,
           });
-        }
-      },
-
-      refreshTokens: async () => {
-        const { refreshToken } = get();
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        try {
-          const response = await authService.refresh(refreshToken);
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
-
-          // Store new tokens in localStorage
-          localStorage.setItem('accessToken', accessToken);
-          if (newRefreshToken) {
-            localStorage.setItem('refreshToken', newRefreshToken);
-          }
-
-          // Store new tokens in cookies
-          document.cookie = `accessToken=${accessToken}; path=/; max-age=86400; SameSite=Strict`;
-          if (newRefreshToken) {
-            document.cookie = `refreshToken=${newRefreshToken}; path=/; max-age=604800; SameSite=Strict`;
-          }
-
-          set({
-            accessToken,
-            refreshToken: newRefreshToken || refreshToken,
-          });
-        } catch (error) {
-          // If refresh fails, logout the user
-          get().logout();
-          throw error;
         }
       },
 
@@ -172,12 +110,6 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       checkAuth: async () => {
-        const { accessToken } = get();
-        if (!accessToken) {
-          set({ isAuthenticated: false, user: null });
-          return;
-        }
-
         try {
           set({ isLoading: true });
           const response = await authService.getMe();
@@ -187,15 +119,12 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           });
         } catch (error) {
+          // If getMe fails, user is not authenticated (HttpOnly cookie may be expired or invalid)
           set({
             isAuthenticated: false,
             user: null,
-            accessToken: null,
-            refreshToken: null,
             isLoading: false,
           });
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
         }
       },
     }),
@@ -203,8 +132,6 @@ export const useAuthStore = create<AuthStore>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

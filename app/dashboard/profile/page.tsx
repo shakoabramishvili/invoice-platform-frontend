@@ -154,9 +154,7 @@ export default function ProfilePage() {
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}/profile-picture`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
+        credentials: 'include', // Send HttpOnly cookies
         body: formData,
       });
 
@@ -195,9 +193,7 @@ export default function ProfilePage() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}/profile-picture`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
+        credentials: 'include', // Send HttpOnly cookies
       });
 
       if (!response.ok) {
