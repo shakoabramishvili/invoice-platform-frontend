@@ -21,10 +21,10 @@ export const initializeStores = async () => {
   }
 
   // Check authentication status
+  // HttpOnly cookies are sent automatically, so we just check if user is authenticated
   const authStore = useAuthStore.getState();
-  const token = authStore.accessToken || localStorage.getItem('accessToken');
 
-  if (token) {
+  if (authStore.isAuthenticated) {
     try {
       await authStore.checkAuth();
     } catch (error) {
