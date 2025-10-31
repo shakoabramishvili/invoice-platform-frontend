@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { ApiResponse, DashboardStats } from '@/types';
+import { ApiResponse, DashboardStats, TopBuyer, EmployeeInvoiceStats } from '@/types';
 
 export interface DashboardQueryParams {
   startDate?: string;
@@ -49,12 +49,7 @@ export const dashboardService = {
     limit?: number;
     startDate?: string;
     endDate?: string;
-  }): Promise<ApiResponse<Array<{
-    id: string;
-    name: string;
-    totalInvoices: number;
-    totalAmount: number;
-  }>>> => {
+  }): Promise<ApiResponse<TopBuyer[]>> => {
     const response = await apiClient.get('/dashboard/top-buyers', { params });
     return response.data;
   },
@@ -89,6 +84,14 @@ export const dashboardService = {
     timestamp: string;
   }>>> => {
     const response = await apiClient.get('/dashboard/recent-activities', { params });
+    return response.data;
+  },
+
+  /**
+   * Get invoices processed per employee
+   */
+  getInvoicesPerEmployee: async (): Promise<ApiResponse<EmployeeInvoiceStats[]>> => {
+    const response = await apiClient.get('/dashboard/invoices-per-employee');
     return response.data;
   },
 };

@@ -125,10 +125,14 @@ export interface Invoice {
 // Dashboard types
 export interface DashboardStats {
   totalInvoices: number;
+  totalCanceledInvoices: number;
   paidInvoices: number;
   pendingInvoices: number;
   canceledInvoices: number;
   totalRevenue: number;
+  revenueUSD: string | number;
+  revenueGEL: string | number;
+  revenueEUR: string | number;
   revenueOverTime: Array<{ month: string; revenue: number }>;
   statusDistribution: Array<{ status: string; count: number; percentage: number }>;
   recentInvoices: Invoice[];
@@ -141,6 +145,22 @@ export interface Activity {
   action: string;
   resource: string;
   timestamp: string;
+}
+
+export interface TopBuyer {
+  name: string;
+  invoiceCount: number;
+  revenueByCurrency: {
+    USD?: number;
+    GEL?: number;
+    EUR?: number;
+  };
+}
+
+export interface EmployeeInvoiceStats {
+  fullName: string;
+  invoiceCount: number;
+  avatar?: string;
 }
 
 // Settings types
