@@ -34,6 +34,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import StatsCards from '@/components/StatsCards';
+import TopBuyersRanked from '@/components/TopBuyersRanked';
+import InvoicesPerEmployee from '@/components/InvoicesPerEmployee';
 import {
   Table,
   TableBody,
@@ -43,7 +46,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { dashboardService } from '@/lib/api';
-import { DashboardStats, InvoiceStatus } from '@/types';
+import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 // Status color mapping
@@ -68,6 +71,8 @@ const PIE_COLORS = [CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.dan
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
+  const [employeeStats, setEmployeeStats] = useState<EmployeeInvoiceStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,11 +84,26 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await dashboardService.getStats();
-      if (response.success) {
-        setStats(response.data);
+
+      // Fetch stats, top buyers, and employee stats in parallel
+      const [statsResponse, topBuyersResponse, employeeStatsResponse] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getTopBuyers({ limit: 5 }),
+        dashboardService.getInvoicesPerEmployee(),
+      ]);
+
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
       } else {
-        setError(response.message || 'Failed to fetch dashboard data');
+        setError(statsResponse.message || 'Failed to fetch dashboard data');
+      }
+
+      if (topBuyersResponse.success) {
+        setTopBuyers(topBuyersResponse.data);
+      }
+
+      if (employeeStatsResponse.success) {
+        setEmployeeStats(employeeStatsResponse.data);
       }
     } catch (err) {
       setError('An error occurred while fetching dashboard data');
@@ -143,151 +163,64 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {loading ? (
-          <>
-            {[...Array(5)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-4 rounded" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-8 w-16 mb-2" />
-                  <Skeleton className="h-3 w-32" />
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        ) : (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-                <FileText className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalInvoices || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">All time invoices</p>
-              </CardContent>
-            </Card>
+      {/* KPI Cards - Modern Design */}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-2xl bg-gray-200 animate-pulse h-40" />
+          ))}
+        </div>
+      ) : (
+        <StatsCards
+          totalInvoices={stats?.totalInvoices || 0}
+          totalCanceledInvoices={stats?.totalCanceledInvoices || 0}
+          revenueUSD={stats?.revenueUSD || 0}
+          revenueGEL={stats?.revenueGEL || 0}
+          revenueEUR={stats?.revenueEUR || 0}
+        />
+      )}
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.paidInvoices || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Successfully completed</p>
-              </CardContent>
-            </Card>
+      {/* Top 5 Buyers by Revenue */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Top 5 Buyers by Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="rounded-xl bg-gray-200 animate-pulse h-24" />
+              ))}
+            </div>
+          ) : (
+            <TopBuyersRanked buyers={topBuyers} />
+          )}
+        </CardContent>
+      </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.pendingInvoices || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Canceled Invoices</CardTitle>
-                <XCircle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.canceledInvoices || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">Voided or canceled</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(stats?.totalRevenue || 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Lifetime earnings</p>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Revenue Over Time Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Revenue Over Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-80 w-full" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats?.revenueOverTime || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    labelStyle={{ color: '#000' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="revenue" fill={CHART_COLORS.primary} name="Revenue" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Invoice Status Distribution Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Invoice Status Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-80 w-full" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats?.statusDistribution || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ status, percentage }) => `${status}: ${percentage.toFixed(1)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {(stats?.statusDistribution || []).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Invoices Processed per Employee */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Invoices Processed per Employee
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-6 space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-200 animate-pulse rounded" />
+              ))}
+            </div>
+          ) : (
+            <InvoicesPerEmployee employees={employeeStats} />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Invoices Table */}
       <Card>
