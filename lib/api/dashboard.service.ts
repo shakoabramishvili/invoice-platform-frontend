@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { ApiResponse, DashboardStats, TopBuyer, EmployeeInvoiceStats, CurrencyRates } from '@/types';
+import { ApiResponse, DashboardStats, TopBuyer, EmployeeInvoiceStats, CurrencyRates, Invoice } from '@/types';
 
 export interface DashboardQueryParams {
   startDate?: string;
@@ -100,6 +100,14 @@ export const dashboardService = {
    */
   getCurrencyRates: async (): Promise<ApiResponse<CurrencyRates>> => {
     const response = await apiClient.get('/dashboard/currency-rates');
+    return response.data;
+  },
+
+  /**
+   * Get recent invoices
+   */
+  getRecentInvoices: async (params?: { limit?: number }): Promise<ApiResponse<Invoice[]>> => {
+    const response = await apiClient.get('/dashboard/recent-invoices', { params });
     return response.data;
   },
 };

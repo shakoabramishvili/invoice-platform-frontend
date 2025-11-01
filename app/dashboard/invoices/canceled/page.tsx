@@ -82,7 +82,8 @@ export default function CanceledInvoicesPage() {
 
       const response = await invoicesService.getCanceled(params);
       setInvoices(response.data);
-      setTotalCount(response.meta?.total || 0);
+      const total = response.meta?.total ?? response.data.length;
+      setTotalCount(total);
     } catch (error) {
       console.error('Error fetching canceled invoices:', error);
       toast.error('Failed to fetch canceled invoices');
@@ -201,9 +202,12 @@ export default function CanceledInvoicesPage() {
       : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+  const startItem = totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const endItem = Math.min(currentPage * itemsPerPage, totalCount);
+
+  // If we have fewer items than the page size, we're on the last page
+  const isLastPage = invoices.length < itemsPerPage || currentPage >= totalPages;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -231,8 +235,16 @@ export default function CanceledInvoicesPage() {
                 placeholder="Search by invoice number, client, or customer name…"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
+                className="pl-9 pr-9"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => handleSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <Popover>
               <PopoverTrigger asChild>
@@ -574,7 +586,7 @@ export default function CanceledInvoicesPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+                disabled={isLastPage}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
