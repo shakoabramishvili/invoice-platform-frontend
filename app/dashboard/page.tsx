@@ -37,6 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import StatsCards from '@/components/StatsCards';
 import TopBuyersRanked from '@/components/TopBuyersRanked';
 import InvoicesPerEmployee from '@/components/InvoicesPerEmployee';
+import CurrencyRatesComparison from '@/components/CurrencyRatesComparison';
 import {
   Table,
   TableBody,
@@ -46,7 +47,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { dashboardService } from '@/lib/api';
-import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats } from '@/types';
+import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats, CurrencyRates } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 // Status color mapping
@@ -73,6 +74,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
   const [employeeStats, setEmployeeStats] = useState<EmployeeInvoiceStats[]>([]);
+  const [currencyRates, setCurrencyRates] = useState<CurrencyRates>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,11 +87,12 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch stats, top buyers, and employee stats in parallel
-      const [statsResponse, topBuyersResponse, employeeStatsResponse] = await Promise.all([
+      // Fetch all dashboard data in parallel
+      const [statsResponse, topBuyersResponse, employeeStatsResponse, currencyRatesResponse] = await Promise.all([
         dashboardService.getStats(),
         dashboardService.getTopBuyers({ limit: 5 }),
         dashboardService.getInvoicesPerEmployee(),
+        dashboardService.getCurrencyRates(),
       ]);
 
       if (statsResponse.success) {
@@ -104,6 +107,10 @@ export default function DashboardPage() {
 
       if (employeeStatsResponse.success) {
         setEmployeeStats(employeeStatsResponse.data);
+      }
+
+      if (currencyRatesResponse.success) {
+        setCurrencyRates(currencyRatesResponse.data);
       }
     } catch (err) {
       setError('An error occurred while fetching dashboard data');
@@ -162,6 +169,16 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Currency Exchange Rates */}
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse h-40" />
+          <div className="rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse h-40" />
+        </div>
+      ) : (
+        <CurrencyRatesComparison rates={currencyRates} />
+      )}
 
       {/* KPI Cards - Modern Design */}
       {loading ? (
