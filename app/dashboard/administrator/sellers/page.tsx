@@ -454,8 +454,16 @@ export default function SellersPage() {
             placeholder="Search by name, email, or company…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -682,12 +690,22 @@ export default function SellersPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <div className="p-2">
-                              <Input
-                                placeholder="Search countries..."
-                                value={countrySearch}
-                                onChange={(e) => setCountrySearch(e.target.value)}
-                                className="mb-2"
-                              />
+                              <div className="relative mb-2">
+                                <Input
+                                  placeholder="Search countries..."
+                                  value={countrySearch}
+                                  onChange={(e) => setCountrySearch(e.target.value)}
+                                  className="pr-8"
+                                />
+                                {countrySearch && (
+                                  <button
+                                    onClick={() => setCountrySearch('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <div className="max-h-[200px] overflow-y-auto">
                               {filteredCountries.map((country) => (

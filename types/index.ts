@@ -101,6 +101,8 @@ export interface Invoice {
   invoiceDate: string;
   dueDate?: string;
   currency: string;
+  currencyTo?: string;
+  departureDate?: string;
   showLogo: boolean;
   showStamp: boolean;
   status: InvoiceStatus;

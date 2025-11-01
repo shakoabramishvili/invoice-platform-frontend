@@ -13,7 +13,6 @@ import {
   FileDown,
   TrendingUp,
   Users,
-  Activity as ActivityIcon,
 } from 'lucide-react';
 import {
   LineChart,
@@ -47,8 +46,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { dashboardService } from '@/lib/api';
-import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats, CurrencyRates } from '@/types';
+import { invoicesService } from '@/lib/api/invoices.service';
+import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats, CurrencyRates, Invoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { toast } from 'sonner';
+import InvoiceDetailModal from '@/components/InvoiceDetailModal';
 
 // Status color mapping
 const statusColors: Record<InvoiceStatus, string> = {
@@ -75,8 +77,11 @@ export default function DashboardPage() {
   const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
   const [employeeStats, setEmployeeStats] = useState<EmployeeInvoiceStats[]>([]);
   const [currencyRates, setCurrencyRates] = useState<CurrencyRates>({});
+  const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -88,11 +93,12 @@ export default function DashboardPage() {
       setError(null);
 
       // Fetch all dashboard data in parallel
-      const [statsResponse, topBuyersResponse, employeeStatsResponse, currencyRatesResponse] = await Promise.all([
+      const [statsResponse, topBuyersResponse, employeeStatsResponse, currencyRatesResponse, recentInvoicesResponse] = await Promise.all([
         dashboardService.getStats(),
         dashboardService.getTopBuyers({ limit: 5 }),
         dashboardService.getInvoicesPerEmployee(),
         dashboardService.getCurrencyRates(),
+        dashboardService.getRecentInvoices({ limit: 10 }),
       ]);
 
       if (statsResponse.success) {
@@ -111,6 +117,10 @@ export default function DashboardPage() {
 
       if (currencyRatesResponse.success) {
         setCurrencyRates(currencyRatesResponse.data);
+      }
+
+      if (recentInvoicesResponse.success) {
+        setRecentInvoices(recentInvoicesResponse.data);
       }
     } catch (err) {
       setError('An error occurred while fetching dashboard data');
@@ -132,6 +142,29 @@ export default function DashboardPage() {
 
   const getStatusBadgeClass = (status: InvoiceStatus) => {
     return statusColors[status] || statusColors.DRAFT;
+  };
+
+  const handleDownloadPdf = async (invoiceId: string) => {
+    try {
+      const blob = await invoicesService.downloadPdf(invoiceId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Invoice downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Failed to download invoice');
+    }
+  };
+
+  const handleViewInvoice = (invoiceId: string) => {
+    setSelectedInvoiceId(invoiceId);
+    setShowDetailModal(true);
   };
 
   if (error) {
@@ -162,10 +195,6 @@ export default function DashboardPage() {
               <Plus className="mr-2 h-4 w-4" />
               Create Invoice
             </Link>
-          </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export Report
           </Button>
         </div>
       </div>
@@ -256,40 +285,44 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice Number</TableHead>
-                  <TableHead>Buyer</TableHead>
+                  <TableHead>Customer</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Currency</TableHead>
+                  <TableHead>Departure Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats?.recentInvoices && stats.recentInvoices.length > 0 ? (
-                  stats.recentInvoices.slice(0, 10).map((invoice) => (
+                {recentInvoices && recentInvoices.length > 0 ? (
+                  recentInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell>
-                        <Link
-                          href={`/invoices/${invoice.id}`}
+                        <button
+                          onClick={() => handleViewInvoice(invoice.id)}
                           className="text-blue-600 hover:underline font-medium"
                         >
                           {invoice.invoiceNumber}
-                        </Link>
+                        </button>
                       </TableCell>
                       <TableCell>{invoice.buyer.name}</TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(invoice.grandTotal, invoice.currency)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusBadgeClass(invoice.status)}>
-                          {invoice.status}
-                        </Badge>
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">
+                          {invoice.currencyTo || invoice.currency}
+                        </span>
                       </TableCell>
-                      <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
+                      <TableCell>
+                        {invoice.departureDate ? formatDate(invoice.departureDate) : '-'}
+                      </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/invoices/${invoice.id}/pdf`}>
-                            <FileDown className="h-4 w-4" />
-                          </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDownloadPdf(invoice.id)}
+                        >
+                          <FileDown className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -307,62 +340,25 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Activity Feed */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ActivityIcon className="h-5 w-5" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {stats?.recentActivities && stats.recentActivities.length > 0 ? (
-                stats.recentActivities.slice(0, 10).map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <ActivityIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">
-                        <span className="font-medium">{activity.user}</span>
-                        {' '}
-                        <span className="text-muted-foreground">{activity.action}</span>
-                        {' '}
-                        <span className="font-medium">{activity.resource}</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDate(activity.timestamp)} at{' '}
-                        {new Date(activity.timestamp).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No recent activity</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Invoice Detail Modal */}
+      {showDetailModal && selectedInvoiceId && (
+        <InvoiceDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedInvoiceId(null);
+          }}
+          invoiceId={selectedInvoiceId}
+          onEdit={() => {
+            // Not implemented in dashboard - could navigate to edit page
+            toast.info('Edit functionality available in Invoices page');
+          }}
+          onSuccess={() => {
+            // Refresh dashboard data after any changes
+            fetchDashboardData();
+          }}
+        />
+      )}
     </div>
   );
 }
