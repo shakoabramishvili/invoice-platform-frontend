@@ -163,6 +163,32 @@ export interface EmployeeInvoiceStats {
   avatar?: string;
 }
 
+export interface BankCurrencyRate {
+  buy?: number;
+  sell?: number;
+  dgtlBuy?: number;
+  dgtlSell?: number;
+  currentRate?: number;
+  officialCourse?: number;
+  rate?: number;
+  quantity?: number;
+  ratePerUnit?: number;
+  diff?: number;
+  name?: string;
+}
+
+export interface BankRates {
+  USD?: BankCurrencyRate;
+  EUR?: BankCurrencyRate;
+}
+
+export interface CurrencyRates {
+  bog?: BankRates;
+  tbc?: BankRates;
+  pcb?: BankRates;
+  nbg?: BankRates;
+}
+
 // Settings types
 export interface Settings {
   companyName: string;
