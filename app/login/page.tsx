@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/lib/stores/authStore';
 import type { LoginFormData } from '@/types';
+import ErrorModal from '@/components/ErrorModal';
+import { useErrorStore } from '@/lib/stores/errorStore';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -28,6 +30,7 @@ export default function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { error, isOpen, clearError } = useErrorStore();
 
   const {
     register,
@@ -184,6 +187,13 @@ export default function LoginPage() {
           </div> */}
         </div>
       </div>
+
+      {/* Global Error Modal */}
+      <ErrorModal
+        isOpen={isOpen}
+        onClose={clearError}
+        error={error}
+      />
     </div>
   );
 }

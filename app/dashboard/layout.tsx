@@ -6,6 +6,8 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import ErrorModal from '@/components/ErrorModal';
+import { useErrorStore } from '@/lib/stores/errorStore';
 
 export default function DashboardLayout({
   children,
@@ -14,6 +16,7 @@ export default function DashboardLayout({
 }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { error, isOpen, clearError } = useErrorStore();
 
   // Listen for sidebar collapse state changes from localStorage
   useEffect(() => {
@@ -65,6 +68,13 @@ export default function DashboardLayout({
       >
         <div className="p-6">{children}</div>
       </main>
+
+      {/* Global Error Modal */}
+      <ErrorModal
+        isOpen={isOpen}
+        onClose={clearError}
+        error={error}
+      />
     </div>
   );
 }
