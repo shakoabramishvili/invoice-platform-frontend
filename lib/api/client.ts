@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ApiError } from '@/types';
+import { useErrorStore } from '@/lib/stores/errorStore';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -43,6 +44,16 @@ apiClient.interceptors.response.use(
       statusCode: error.response?.status || 500,
       errors: error.response?.data?.errors,
     };
+
+    // Show error modal for client/server errors (except 401)
+    if (typeof window !== 'undefined') {
+      const errorData = error.response?.data as any;
+      useErrorStore.getState().showError({
+        message: errorData?.message || error.message || 'An unexpected error occurred',
+        error: errorData?.error,
+        statusCode: error.response?.status || 500,
+      });
+    }
 
     return Promise.reject(apiError);
   }
