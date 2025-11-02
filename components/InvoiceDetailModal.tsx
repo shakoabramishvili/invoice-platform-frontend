@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, Printer, Edit, XCircle, Loader2 } from 'lucide-react';
+import { Download, Printer, Edit, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { invoicesService } from '@/lib/api/invoices.service';
@@ -101,6 +101,11 @@ export default function InvoiceDetailModal({
   const handleCancelConfirm = async () => {
     if (!invoice || !cancelReason.trim()) {
       toast.error('Please enter a cancellation reason');
+      return;
+    }
+
+    if (cancelReason.trim().length < 10) {
+      toast.error('Cancellation reason must be at least 10 characters');
       return;
     }
 
@@ -407,42 +412,86 @@ export default function InvoiceDetailModal({
 
       {/* Cancel Invoice Dialog */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cancel Invoice</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to cancel invoice <strong>{invoice?.invoiceNumber}</strong>?
-              This action cannot be undone.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="cancelReason">Cancellation Reason *</Label>
-              <Textarea
-                id="cancelReason"
-                placeholder="Please provide a reason for canceling this invoice..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows={4}
-              />
+        <DialogContent className="max-w-lg">
+          {/* Warning Icon Header */}
+          <div className="flex flex-col items-center text-center space-y-3 pt-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-950/50 dark:to-orange-950/50 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Cancel Invoice</DialogTitle>
+              <p className="text-sm text-muted-foreground pt-2">
+                You are about to cancel invoice{' '}
+                <span className="font-semibold text-foreground">{invoice?.invoiceNumber}</span>
+              </p>
+            </DialogHeader>
+          </div>
+
+          {/* Warning Message */}
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg p-4">
+            <div className="flex gap-3">
+              <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                  This action cannot be undone
+                </p>
+                <p className="text-xs text-red-700 dark:text-red-300">
+                  The invoice will be permanently marked as canceled and cannot be reverted to its previous status.
+                </p>
+              </div>
             </div>
           </div>
-          <DialogFooter>
+
+          {/* Cancellation Reason Input */}
+          <div className="space-y-3 py-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cancelReason" className="text-base font-semibold">
+                Cancellation Reason <span className="text-red-500">*</span>
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                {cancelReason.length}/500
+              </span>
+            </div>
+            <Textarea
+              id="cancelReason"
+              placeholder="Please provide a detailed reason for canceling this invoice (e.g., customer request, billing error, duplicate invoice)..."
+              value={cancelReason}
+              onChange={(e) => {
+                if (e.target.value.length <= 500) {
+                  setCancelReason(e.target.value);
+                }
+              }}
+              rows={5}
+              className="resize-none border-2 focus:border-red-300 dark:focus:border-red-700"
+            />
+            {cancelReason.trim().length > 0 && cancelReason.trim().length < 10 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Please provide a more detailed reason (at least 10 characters)
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 setIsCancelDialogOpen(false);
                 setCancelReason('');
               }}
+              className="flex-1 sm:flex-none"
             >
-              Close
+              Keep Invoice
             </Button>
             <Button
               variant="destructive"
               onClick={handleCancelConfirm}
-              disabled={!cancelReason.trim()}
+              disabled={!cancelReason.trim() || cancelReason.trim().length < 10}
+              className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
             >
-              Cancel Invoice
+              <XCircle className="w-4 h-4 mr-2" />
+              Confirm Cancellation
             </Button>
           </DialogFooter>
         </DialogContent>
