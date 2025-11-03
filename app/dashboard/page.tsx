@@ -311,22 +311,47 @@ export default function DashboardPage() {
                         </button>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help">
-                                {invoice.buyer.name.length > 30
-                                  ? `${invoice.buyer.name.substring(0, 30)}...`
-                                  : invoice.buyer.name}
-                              </span>
-                            </TooltipTrigger>
-                            {invoice.buyer.name.length > 30 && (
-                              <TooltipContent>
-                                <p>{invoice.buyer.name}</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        {invoice.buyer ? (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help">
+                                  {invoice.buyer.name.length > 30
+                                    ? `${invoice.buyer.name.substring(0, 30)}...`
+                                    : invoice.buyer.name}
+                                </span>
+                              </TooltipTrigger>
+                              {invoice.buyer.name.length > 30 && (
+                                <TooltipContent>
+                                  <p>{invoice.buyer.name}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          (() => {
+                            const mainPassenger = invoice.passengers?.find((p: any) => p.isMain);
+                            const fullName = mainPassenger
+                              ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
+                              : 'Individual';
+                            return fullName.length > 30 ? (
+                              <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help">
+                                      {fullName.substring(0, 30)}...
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{fullName}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span>{fullName}</span>
+                            );
+                          })()
+                        )}
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(invoice.grandTotal, invoice.currency)}

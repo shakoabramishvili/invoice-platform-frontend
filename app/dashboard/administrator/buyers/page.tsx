@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { buyersService } from '@/lib/api/buyers.service';
@@ -111,6 +111,9 @@ export default function BuyersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
   const [deletingBuyer, setDeletingBuyer] = useState<Buyer | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const { toast } = useToast();
 
   const {
@@ -154,8 +157,14 @@ export default function BuyersPage() {
   const fetchBuyers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await buyersService.getAll({ search: searchQuery });
+      const response = await buyersService.getAll({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery,
+      });
       setBuyers(response.data);
+      const total = response.pagination?.total ?? response.total ?? response.meta?.total ?? response.data.length;
+      setTotalCount(total);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -165,7 +174,7 @@ export default function BuyersPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, toast]);
+  }, [currentPage, itemsPerPage, searchQuery, toast]);
 
   useEffect(() => {
     fetchBuyers();
@@ -400,6 +409,132 @@ export default function BuyersPage() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {!loading && buyers.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-4 border-t">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Items per page:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground ml-4">
+                Showing {totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} items
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {(() => {
+                  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+                  const pages = [];
+
+                  if (totalPages <= 5) {
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(i)}
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
+                  } else {
+                    pages.push(
+                      <Button
+                        key={1}
+                        variant={currentPage === 1 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(1)}
+                      >
+                        1
+                      </Button>
+                    );
+
+                    if (currentPage > 3) {
+                      pages.push(
+                        <span key="dots-1" className="px-2 text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+
+                    for (let i = start; i <= end; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(i)}
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
+
+                    if (currentPage < totalPages - 2) {
+                      pages.push(
+                        <span key="dots-2" className="px-2 text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    pages.push(
+                      <Button
+                        key={totalPages}
+                        variant={currentPage === totalPages ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    );
+                  }
+
+                  return pages;
+                })()}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalCount / itemsPerPage), prev + 1))}
+                disabled={currentPage >= Math.ceil(totalCount / itemsPerPage)}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Buyer Modal */}

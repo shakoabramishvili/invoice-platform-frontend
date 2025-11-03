@@ -272,7 +272,18 @@ export default function InvoiceDetailModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Buyer</p>
-                  <p className="font-medium">{invoice.buyer.name}</p>
+                  <p className="font-medium">
+                    {invoice.buyer ? (
+                      invoice.buyer.name
+                    ) : (
+                      (() => {
+                        const mainPassenger = invoice.passengers?.find((p: any) => p.isMain);
+                        return mainPassenger
+                          ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
+                          : 'Individual';
+                      })()
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Seller</p>
