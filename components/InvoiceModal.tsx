@@ -23,12 +23,13 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, Calendar } from 'lucide-react';
+import { Trash2, Plus, Calendar, X } from 'lucide-react';
 import { invoicesService } from '@/lib/api/invoices.service';
 import { buyersService } from '@/lib/api/buyers.service';
 import { sellersService } from '@/lib/api/sellers.service';
 import { Invoice, Buyer, Seller, InvoiceFormData } from '@/types';
 import { toast } from 'sonner';
+import CustomerModal from '@/components/CustomerModal';
 
 const passengerSchema = z.object({
   gender: z.enum(['MR', 'MS', 'MRS', 'CHD', 'INF']),
@@ -83,6 +84,9 @@ export default function InvoiceModal({
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [sellerSearch, setSellerSearch] = useState('');
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
 
   const {
     register,
@@ -140,6 +144,14 @@ export default function InvoiceModal({
     fetchBuyers();
     fetchSellers();
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Clear search inputs when modal closes
+      setCustomerSearch('');
+      setSellerSearch('');
+    }
+  }, [isOpen]);
 
 
   useEffect(() => {
@@ -236,6 +248,27 @@ export default function InvoiceModal({
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       toast.error('Failed to fetch suppliers');
+    }
+  };
+
+  // Filter customers based on search
+  const filteredCustomers = buyers.filter((buyer) =>
+    buyer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    buyer.email.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  // Filter sellers based on search
+  const filteredSellers = sellers.filter((seller) =>
+    seller.name.toLowerCase().includes(sellerSearch.toLowerCase()) ||
+    seller.email.toLowerCase().includes(sellerSearch.toLowerCase())
+  );
+
+  const handleCustomerCreated = async (customerId?: string) => {
+    // Refresh buyers list
+    await fetchBuyers();
+    // Auto-select the newly created customer if ID is provided
+    if (customerId) {
+      setValue('buyerId', customerId);
     }
   };
 
@@ -399,11 +432,38 @@ export default function InvoiceModal({
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                         <SelectContent>
-                          {buyers.map((buyer) => (
-                            <SelectItem key={buyer.id} value={buyer.id}>
-                              {buyer.name}
-                            </SelectItem>
-                          ))}
+                          <div className="p-2">
+                            <div className="relative mb-2">
+                              <Input
+                                placeholder="Search customers..."
+                                value={customerSearch}
+                                onChange={(e) => setCustomerSearch(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                autoFocus
+                                className="pr-8"
+                              />
+                              {customerSearch && (
+                                <button
+                                  onClick={() => setCustomerSearch('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-[200px] overflow-y-auto">
+                            {filteredCustomers.map((buyer) => (
+                              <SelectItem key={buyer.id} value={buyer.id}>
+                                {buyer.name}
+                              </SelectItem>
+                            ))}
+                            {filteredCustomers.length === 0 && (
+                              <div className="py-6 text-center text-sm text-muted-foreground">
+                                No customers found
+                              </div>
+                            )}
+                          </div>
                         </SelectContent>
                       </Select>
                     )}
@@ -413,6 +473,14 @@ export default function InvoiceModal({
                       {errors.buyerId.message}
                     </p>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerModal(true)}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Create customer
+                  </button>
                 </div>
                 <div>
                   <Label htmlFor="sellerId">Supplier</Label>
@@ -425,11 +493,38 @@ export default function InvoiceModal({
                           <SelectValue placeholder="Select supplier" />
                         </SelectTrigger>
                         <SelectContent>
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.id}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
+                          <div className="p-2">
+                            <div className="relative mb-2">
+                              <Input
+                                placeholder="Search suppliers..."
+                                value={sellerSearch}
+                                onChange={(e) => setSellerSearch(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                autoFocus
+                                className="pr-8"
+                              />
+                              {sellerSearch && (
+                                <button
+                                  onClick={() => setSellerSearch('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="max-h-[200px] overflow-y-auto">
+                            {filteredSellers.map((seller) => (
+                              <SelectItem key={seller.id} value={seller.id}>
+                                {seller.name}
+                              </SelectItem>
+                            ))}
+                            {filteredSellers.length === 0 && (
+                              <div className="py-6 text-center text-sm text-muted-foreground">
+                                No suppliers found
+                              </div>
+                            )}
+                          </div>
                         </SelectContent>
                       </Select>
                     )}
@@ -847,6 +942,13 @@ export default function InvoiceModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Customer Creation Modal */}
+      <CustomerModal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onSuccess={handleCustomerCreated}
+      />
     </Dialog>
   );
 }

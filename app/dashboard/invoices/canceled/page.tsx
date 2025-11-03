@@ -127,13 +127,13 @@ export default function CanceledInvoicesPage() {
     setCurrentPage(1);
   };
 
-  const handleDownloadPdf = async (invoiceId: string) => {
+  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     try {
       const blob = await invoicesService.downloadPdf(invoiceId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice-${invoiceId}.pdf`;
+      a.download = `invoice-${invoiceNumber}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -454,7 +454,24 @@ export default function CanceledInvoicesPage() {
                     <TableCell className="whitespace-nowrap">
                       {invoice.canceledAt ? formatDate(invoice.canceledAt) : '-'}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">{invoice.buyer.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">
+                              {invoice.buyer.name.length > 30
+                                ? `${invoice.buyer.name.substring(0, 30)}...`
+                                : invoice.buyer.name}
+                            </span>
+                          </TooltipTrigger>
+                          {invoice.buyer.name.length > 30 && (
+                            <TooltipContent>
+                              <p>{invoice.buyer.name}</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {invoice.products[0]?.departureDate
                         ? formatDate(invoice.products[0].departureDate)
@@ -506,7 +523,7 @@ export default function CanceledInvoicesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDownloadPdf(invoice.id)}
+                                onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
                               >
                                 <FileDown className="h-4 w-4" />
                               </Button>
