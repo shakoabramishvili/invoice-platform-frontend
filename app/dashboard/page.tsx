@@ -25,7 +25,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
@@ -45,6 +45,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { dashboardService } from '@/lib/api';
 import { invoicesService } from '@/lib/api/invoices.service';
 import { DashboardStats, InvoiceStatus, TopBuyer, EmployeeInvoiceStats, CurrencyRates, Invoice } from '@/types';
@@ -144,13 +150,13 @@ export default function DashboardPage() {
     return statusColors[status] || statusColors.DRAFT;
   };
 
-  const handleDownloadPdf = async (invoiceId: string) => {
+  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     try {
       const blob = await invoicesService.downloadPdf(invoiceId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice-${invoiceId}.pdf`;
+      a.download = `invoice-${invoiceNumber}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -247,12 +253,12 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Invoices Processed per Employee */}
+      {/* Employee Invoice Activity */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Invoices Processed per Employee
+            Employee Invoice Activity
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -284,7 +290,7 @@ export default function DashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice Number</TableHead>
+                  <TableHead className="min-w-[180px]">Invoice Number</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Currency</TableHead>
@@ -296,7 +302,7 @@ export default function DashboardPage() {
                 {recentInvoices && recentInvoices.length > 0 ? (
                   recentInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
-                      <TableCell>
+                      <TableCell className="min-w-[180px]">
                         <button
                           onClick={() => handleViewInvoice(invoice.id)}
                           className="text-blue-600 hover:underline font-medium"
@@ -304,7 +310,24 @@ export default function DashboardPage() {
                           {invoice.invoiceNumber}
                         </button>
                       </TableCell>
-                      <TableCell>{invoice.buyer.name}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {invoice.buyer.name.length > 30
+                                  ? `${invoice.buyer.name.substring(0, 30)}...`
+                                  : invoice.buyer.name}
+                              </span>
+                            </TooltipTrigger>
+                            {invoice.buyer.name.length > 30 && (
+                              <TooltipContent>
+                                <p>{invoice.buyer.name}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(invoice.grandTotal, invoice.currency)}
                       </TableCell>
@@ -320,7 +343,7 @@ export default function DashboardPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDownloadPdf(invoice.id)}
+                          onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
                         >
                           <FileDown className="h-4 w-4" />
                         </Button>

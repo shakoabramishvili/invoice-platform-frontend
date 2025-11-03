@@ -20,6 +20,15 @@ export default function InvoicesPerEmployee({ employees }: InvoicesPerEmployeePr
     setFailedAvatars((prev) => new Set(prev).add(fullName));
   };
 
+  // Get initials from full name
+  const getInitials = (fullName: string) => {
+    const names = fullName.trim().split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className="space-y-0">
       {sortedEmployees.map((employee, index) => (
@@ -57,7 +66,9 @@ export default function InvoicesPerEmployee({ employees }: InvoicesPerEmployeePr
                   onError={() => handleAvatarError(employee.fullName)}
                 />
               ) : (
-                <User className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  {getInitials(employee.fullName)}
+                </span>
               )}
             </div>
             <span className="font-semibold text-gray-900 dark:text-white text-base truncate">

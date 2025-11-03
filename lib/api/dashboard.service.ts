@@ -88,7 +88,7 @@ export const dashboardService = {
   },
 
   /**
-   * Get invoices processed per employee
+   * Get Employee Invoice Activity
    */
   getInvoicesPerEmployee: async (): Promise<ApiResponse<EmployeeInvoiceStats[]>> => {
     const response = await apiClient.get('/dashboard/invoices-per-employee');

@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Common countries with their flags
 const COUNTRIES = [
@@ -346,7 +347,24 @@ export default function BuyersPage() {
             ) : (
               buyers.map((buyer) => (
                 <TableRow key={buyer.id}>
-                  <TableCell className="whitespace-nowrap font-medium">{buyer.name}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            {buyer.name.length > 30
+                              ? `${buyer.name.substring(0, 30)}...`
+                              : buyer.name}
+                          </span>
+                        </TooltipTrigger>
+                        {buyer.name.length > 30 && (
+                          <TooltipContent>
+                            <p>{buyer.name}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">{buyer.prefix || '-'}</TableCell>
                   <TableCell className="whitespace-nowrap">{buyer.contactPerson}</TableCell>
                   <TableCell className="whitespace-nowrap">{buyer.email}</TableCell>
