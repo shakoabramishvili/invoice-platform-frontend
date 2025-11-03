@@ -212,6 +212,17 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data: T;
   message: string;
+  // Pagination can be in different structures depending on endpoint
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
   meta?: {
     page: number;
     limit: number;

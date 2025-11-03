@@ -50,10 +50,13 @@ const productSchema = z.object({
 
 const invoiceSchema = z.object({
   issueDate: z.date(),
+  legalType: z.enum(['INDIVIDUAL', 'LEGAL_ENTITY'], {
+    required_error: 'Legal type is required',
+  }),
   showLogo: z.boolean(),
   showStamp: z.boolean(),
   currencyFrom: z.string().min(1, 'Currency is required'),
-  buyerId: z.string().min(1, 'Customer is required'),
+  buyerId: z.string().optional(),
   sellerId: z.string().min(1, 'Supplier is required'),
   passengers: z.array(passengerSchema),
   products: z.array(productSchema).min(1, 'At least one product is required'),
@@ -64,6 +67,15 @@ const invoiceSchema = z.object({
   description: z.string().optional(),
   notes: z.string().optional(),
   termsAndConditions: z.string().optional(),
+}).refine((data) => {
+  // If legal type is LEGAL_ENTITY, buyerId is required
+  if (data.legalType === 'LEGAL_ENTITY') {
+    return !!data.buyerId;
+  }
+  return true;
+}, {
+  message: 'Customer is required for legal entity',
+  path: ['buyerId'],
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -100,6 +112,7 @@ export default function InvoiceModal({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       issueDate: new Date(),
+      legalType: 'LEGAL_ENTITY',
       showLogo: true,
       showStamp: true,
       currencyFrom: 'USD',
@@ -139,6 +152,7 @@ export default function InvoiceModal({
   const watchExchangeRate = watch('exchangeRate');
   const watchCurrencyFrom = watch('currencyFrom');
   const watchCurrencyTo = watch('currencyTo');
+  const watchLegalType = watch('legalType');
 
   useEffect(() => {
     fetchBuyers();
@@ -169,10 +183,11 @@ export default function InvoiceModal({
 
       reset({
         issueDate: new Date((invoice as any).issueDate),
+        legalType: invoice.buyer?.id ? 'LEGAL_ENTITY' : 'INDIVIDUAL',
         showLogo: invoice.showLogo,
         showStamp: invoice.showStamp,
         currencyFrom: (invoice as any).currencyFrom,
-        buyerId: invoice.buyer.id,
+        buyerId: invoice.buyer?.id || '',
         sellerId: invoice.seller.id,
         passengers: (invoice.passengers || []).map((p: any) => ({
           gender: p.gender,
@@ -280,7 +295,8 @@ export default function InvoiceModal({
       // Format the data to match API expectations
       const formData: any = {
         sellerId: data.sellerId,
-        buyerId: data.buyerId,
+        legalType: data.legalType,
+        ...(data.legalType === 'LEGAL_ENTITY' && data.buyerId ? { buyerId: data.buyerId } : {}),
         issueDate: data.issueDate instanceof Date
           ? data.issueDate.toISOString().split('T')[0]
           : data.issueDate,
@@ -381,6 +397,39 @@ export default function InvoiceModal({
                     </p>
                   )}
                 </div>
+
+                <div>
+                  <Label htmlFor="legalType">Legal Type</Label>
+                  <Controller
+                    name="legalType"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Clear buyerId when switching to INDIVIDUAL
+                          if (value === 'INDIVIDUAL') {
+                            setValue('buyerId', '');
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select legal type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INDIVIDUAL">Individual</SelectItem>
+                          <SelectItem value="LEGAL_ENTITY">Legal Entity</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.legalType && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.legalType.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -422,14 +471,24 @@ export default function InvoiceModal({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="buyerId">Customer</Label>
+                  <Label htmlFor="buyerId">
+                    Customer {watchLegalType === 'LEGAL_ENTITY' && <span className="text-destructive">*</span>}
+                  </Label>
                   <Controller
                     control={control}
                     name="buyerId"
                     render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer" />
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={watchLegalType === 'INDIVIDUAL'}
+                      >
+                        <SelectTrigger disabled={watchLegalType === 'INDIVIDUAL'}>
+                          <SelectValue placeholder={
+                            watchLegalType === 'INDIVIDUAL'
+                              ? 'Not required for individual'
+                              : 'Select customer'
+                          } />
                         </SelectTrigger>
                         <SelectContent>
                           <div className="p-2">
@@ -473,14 +532,16 @@ export default function InvoiceModal({
                       {errors.buyerId.message}
                     </p>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerModal(true)}
-                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Create customer
-                  </button>
+                  {watchLegalType === 'LEGAL_ENTITY' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerModal(true)}
+                      className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Create customer
+                    </button>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="sellerId">Supplier</Label>

@@ -59,7 +59,7 @@ export default function CanceledInvoicesPage() {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Sorting states
   const [sortBy, setSortBy] = useState<string>('issueDate');
@@ -81,8 +81,11 @@ export default function CanceledInvoicesPage() {
       };
 
       const response = await invoicesService.getCanceled(params);
+
       setInvoices(response.data);
-      const total = response.meta?.total ?? response.data.length;
+
+      // Backend returns pagination in a 'pagination' object
+      const total = response.pagination?.total ?? response.total ?? response.meta?.total ?? response.data.length;
       setTotalCount(total);
     } catch (error) {
       console.error('Error fetching canceled invoices:', error);
@@ -206,8 +209,8 @@ export default function CanceledInvoicesPage() {
   const startItem = totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const endItem = Math.min(currentPage * itemsPerPage, totalCount);
 
-  // If we have fewer items than the page size, we're on the last page
-  const isLastPage = invoices.length < itemsPerPage || currentPage >= totalPages;
+  // Check if we're on the last page
+  const isLastPage = currentPage >= totalPages;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -455,22 +458,47 @@ export default function CanceledInvoicesPage() {
                       {invoice.canceledAt ? formatDate(invoice.canceledAt) : '-'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">
-                              {invoice.buyer.name.length > 30
-                                ? `${invoice.buyer.name.substring(0, 30)}...`
-                                : invoice.buyer.name}
-                            </span>
-                          </TooltipTrigger>
-                          {invoice.buyer.name.length > 30 && (
-                            <TooltipContent>
-                              <p>{invoice.buyer.name}</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                      {invoice.buyer ? (
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {invoice.buyer.name.length > 30
+                                  ? `${invoice.buyer.name.substring(0, 30)}...`
+                                  : invoice.buyer.name}
+                              </span>
+                            </TooltipTrigger>
+                            {invoice.buyer.name.length > 30 && (
+                              <TooltipContent>
+                                <p>{invoice.buyer.name}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        (() => {
+                          const mainPassenger = invoice.passengers?.find((p: any) => p.isMain);
+                          const fullName = mainPassenger
+                            ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
+                            : 'Individual';
+                          return fullName.length > 30 ? (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">
+                                    {fullName.substring(0, 30)}...
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{fullName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span>{fullName}</span>
+                          );
+                        })()
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {invoice.products[0]?.departureDate
@@ -556,6 +584,7 @@ export default function CanceledInvoicesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>
                   <SelectItem value="100">100</SelectItem>
@@ -576,28 +605,86 @@ export default function CanceledInvoicesPage() {
                 Previous
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
+                {(() => {
+                  const pages = [];
+
                   if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
+                    // Show all pages if 5 or less
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(i)}
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
                   } else {
-                    pageNum = currentPage - 2 + i;
+                    // Always show first page
+                    pages.push(
+                      <Button
+                        key={1}
+                        variant={currentPage === 1 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(1)}
+                      >
+                        1
+                      </Button>
+                    );
+
+                    // Show dots if current page is > 3
+                    if (currentPage > 3) {
+                      pages.push(
+                        <span key="dots-1" className="px-2 text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    // Show pages around current page
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+
+                    for (let i = start; i <= end; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(i)}
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
+
+                    // Show dots if current page is < totalPages - 2
+                    if (currentPage < totalPages - 2) {
+                      pages.push(
+                        <span key="dots-2" className="px-2 text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    // Always show last page
+                    pages.push(
+                      <Button
+                        key={totalPages}
+                        variant={currentPage === totalPages ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    );
                   }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+
+                  return pages;
+                })()}
               </div>
               <Button
                 variant="outline"
