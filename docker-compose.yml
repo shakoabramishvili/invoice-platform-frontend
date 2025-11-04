@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  invoice-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invoice-platform-frontend
+    ports:
+      - "4005:4005"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:4004/api
+    restart: unless-stopped
+    networks:
+      - invoice-network
+
+networks:
+  invoice-network:
+    driver: bridge

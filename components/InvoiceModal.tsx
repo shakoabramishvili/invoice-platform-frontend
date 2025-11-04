@@ -204,7 +204,7 @@ export default function InvoiceModal({
           price: Number(p.price) || 0,
           total: Number(p.total) || 0,
         })),
-        discountType: invoice.discountType || 'FIXED_AMOUNT',
+        discountType: invoice.discountType === 'PERCENTAGE' ? 'PERCENTAGE' : 'FIXED_AMOUNT',
         discountValue: Number(invoice.discountValue) || 0,
         currencyTo: (invoice as any).currencyTo,
         exchangeRate: Number(invoice.exchangeRate) || 0,
