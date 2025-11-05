@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'invoice-platform-frontend',
+      name: 'frontend',
       script: 'npm',
       args: 'start',
       env: {
