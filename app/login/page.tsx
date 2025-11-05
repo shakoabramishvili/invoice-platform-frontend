@@ -57,14 +57,14 @@ export default function LoginPage() {
         description: 'You have been logged in successfully',
       });
 
-      router.push('/dashboard');
+      // Use window.location to force a full page reload with cookies
+      window.location.href = '/dashboard';
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to login. Please try again.',
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };
