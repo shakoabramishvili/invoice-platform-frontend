@@ -15,7 +15,7 @@ jobs:
 
       - name: Pull and Deploy Frontend
         run: |
-          cd /var/www/html/invoice-platform-frontend
+          cd /var/www/invoice-platform-frontend
 
           echo "Pulling latest code from main..."
           git pull origin main
