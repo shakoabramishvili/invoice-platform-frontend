@@ -17,8 +17,13 @@ jobs:
           echo "Pulling latest code from main..."
           git pull origin main
 
-          echo "Cleaning cache (ignoring permission errors)..."
-          rm -rf .next/ 2>/dev/null || true
+          echo "Stopping PM2 to release file locks..."
+          pm2 stop frontend || true
+
+          echo "Cleaning build directory completely..."
+          find .next -type f -exec chmod 644 {} \; 2>/dev/null || true
+          find .next -type d -exec chmod 755 {} \; 2>/dev/null || true
+          rm -rf .next/
           rm -rf node_modules/.cache/ 2>/dev/null || true
 
           echo "Installing dependencies..."
@@ -30,8 +35,8 @@ jobs:
           echo "Ensuring logs directory exists..."
           mkdir -p logs
 
-          echo "Restarting with PM2..."
-          pm2 startOrReload ecosystem.config.js --update-env
+          echo "Starting with PM2..."
+          pm2 start ecosystem.config.js
 
           echo "Checking PM2 status..."
           pm2 status
