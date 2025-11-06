@@ -18,7 +18,7 @@ jobs:
           git pull origin main
 
           echo "Stopping PM2 frontend..."
-          pm2 stop frontend
+          sudo pm2 stop frontend
 
           echo "Cleaning build directories..."
           sudo rm -rf .next
@@ -35,9 +35,9 @@ jobs:
           mkdir -p logs
 
           echo "Starting PM2..."
-          pm2 start ecosystem.config.js
+          sudo pm2 start ecosystem.config.js
 
           echo "Checking PM2 status..."
-          pm2 status
+          sudo pm2 status
 
           echo "Deployment completed successfully."
