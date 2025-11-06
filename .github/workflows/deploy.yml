@@ -17,8 +17,15 @@ jobs:
           echo "Pulling latest code from main..."
           git pull origin main
 
-          echo "Cleaning build directory (will rebuild everything)..."
-          rm -rf .next/ || true
+          echo "Stopping PM2 frontend..."
+          pm2 stop frontend 2>/dev/null || true
+          sleep 2
+
+          echo "Moving old build directory out of the way..."
+          mv .next .next.old 2>/dev/null || true
+
+          echo "Cleaning node cache..."
+          rm -rf node_modules/.cache 2>/dev/null || true
 
           echo "Installing dependencies..."
           yarn install --frozen-lockfile
@@ -26,11 +33,17 @@ jobs:
           echo "Building app with adequate memory..."
           NODE_OPTIONS="--max-old-space-size=2048" yarn build
 
+          echo "Removing old build directory in background..."
+          rm -rf .next.old 2>/dev/null &
+
           echo "Ensuring logs directory exists..."
           mkdir -p logs
 
-          echo "Reloading with PM2..."
-          pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+          echo "Starting PM2..."
+          pm2 start ecosystem.config.js 2>/dev/null || pm2 restart frontend
+
+          echo "Saving PM2 configuration..."
+          pm2 save --force
 
           echo "Checking PM2 status..."
           pm2 status
