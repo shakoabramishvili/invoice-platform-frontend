@@ -10,9 +10,6 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
       - name: Pull and Deploy Frontend
         run: |
           cd /var/www/invoice-platform-frontend
@@ -22,16 +19,20 @@ jobs:
 
           echo "Cleaning build cache..."
           rm -rf .next/
-          rm -rf node_modules/
 
           echo "Installing dependencies..."
-          npm install
+          yarn install --frozen-lockfile
 
           echo "Building app with adequate memory..."
-          NODE_OPTIONS="--max-old-space-size=2048" npm run build
+          NODE_OPTIONS="--max-old-space-size=2048" yarn build
+
+          echo "Ensuring logs directory exists..."
+          mkdir -p logs
 
           echo "Restarting with PM2..."
-          pm2 delete frontend || true
-          pm2 start dist/main.js --name frontend --node-args="--max-old-space-size=1024"
+          pm2 startOrReload ecosystem.config.js --update-env
+
+          echo "Checking PM2 status..."
+          pm2 status
 
           echo "Deployment completed successfully."
