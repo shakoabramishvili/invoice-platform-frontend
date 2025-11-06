@@ -17,9 +17,10 @@ jobs:
           echo "Pulling latest code from main..."
           git pull origin main
 
-          echo "Stopping PM2 frontend..."
-          pm2 stop frontend 2>/dev/null || true
-          sleep 2
+          echo "Finding and stopping PM2 process..."
+          # Kill the actual Node.js process to release file locks
+          pkill -f "node.*frontend" || true
+          sleep 3
 
           echo "Moving old build directory out of the way..."
           mv .next .next.old 2>/dev/null || true
@@ -39,7 +40,12 @@ jobs:
           echo "Ensuring logs directory exists..."
           mkdir -p logs
 
-          echo "Starting PM2..."
+          echo "Starting with PM2..."
+          # Find the correct PM2 home and use it
+          export PM2_HOME=$(find /home -name ".pm2" -type d 2>/dev/null | head -n 1)
+          if [ -z "$PM2_HOME" ]; then
+            export PM2_HOME="/root/.pm2"
+          fi
           pm2 start ecosystem.config.js 2>/dev/null || pm2 restart frontend
 
           echo "Saving PM2 configuration..."
