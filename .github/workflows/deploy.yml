@@ -18,7 +18,7 @@ jobs:
           git pull origin main
 
           echo "Cleaning build cache..."
-          sudo rm -rf .next/
+          rm -rf .next/ 2>/dev/null || true
 
           echo "Installing dependencies..."
           yarn install --frozen-lockfile
