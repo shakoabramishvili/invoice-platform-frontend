@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Search, Plus, Edit, Trash2, Eye, EyeOff, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { usersService } from '@/lib/api/users.service';
 import { User, UserFormData } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { getRoleDescription } from '@/lib/permissions';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ const userSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
-  role: z.enum(['ADMIN', 'OPERATOR', 'VIEWER'], {
+  role: z.enum(['ADMIN', 'MANAGER', 'OPERATOR', 'ACCOUNTANT', 'VIEWER'], {
     required_error: 'Please select a role',
   }),
   password: z.string().optional(),
@@ -103,6 +104,7 @@ export default function UsersPage() {
     reset,
     setValue,
     watch,
+    control,
   } = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -268,7 +270,11 @@ export default function UsersPage() {
     switch (role) {
       case 'ADMIN':
         return 'default';
+      case 'MANAGER':
+        return 'default';
       case 'OPERATOR':
+        return 'secondary';
+      case 'ACCOUNTANT':
         return 'secondary';
       case 'VIEWER':
         return 'outline';
@@ -568,19 +574,49 @@ export default function UsersPage() {
 
             <div className="space-y-2">
               <Label htmlFor="role">Role *</Label>
-              <Select
-                onValueChange={(value) => setValue('role', value as any)}
-                defaultValue={editingUser?.role || 'VIEWER'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="OPERATOR">Operator</SelectItem>
-                  <SelectItem value="VIEWER">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ADMIN">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Admin</span>
+                          <span className="text-xs text-muted-foreground">Full access to all features</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="MANAGER">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Manager</span>
+                          <span className="text-xs text-muted-foreground">Full access except payment status</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="OPERATOR">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Operator</span>
+                          <span className="text-xs text-muted-foreground">Cannot manage users or payment status</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="ACCOUNTANT">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Accountant</span>
+                          <span className="text-xs text-muted-foreground">View, download PDFs, export Excel only</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="VIEWER">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Viewer</span>
+                          <span className="text-xs text-muted-foreground">View data only (read-only)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.role && (
                 <p className="text-sm text-destructive">{errors.role.message}</p>
               )}

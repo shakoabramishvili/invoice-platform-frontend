@@ -40,8 +40,11 @@ import InvoiceModal from '@/components/InvoiceModal';
 import InvoiceDetailModal from '@/components/InvoiceDetailModal';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { usePermissions, useUser } from '@/hooks/use-permissions';
 
 export default function CanceledInvoicesPage() {
+  const permissions = usePermissions();
+  const user = useUser();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,6 +215,18 @@ export default function CanceledInvoicesPage() {
   // Check if we're on the last page
   const isLastPage = currentPage >= totalPages;
 
+  const getPaymentStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return { variant: 'default' as const, className: 'bg-green-600 hover:bg-green-700 text-white border-transparent' };
+      case 'UNPAID':
+      case 'PENDING':
+        return { variant: 'destructive' as const, className: '' };
+      default:
+        return { variant: 'secondary' as const, className: '' };
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
@@ -221,10 +236,12 @@ export default function CanceledInvoicesPage() {
           <p className="text-muted-foreground">View and manage canceled invoices</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export to Excel
-          </Button>
+          {permissions.canExportExcel && (
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+          )}
         </div>
       </div>
 
@@ -376,6 +393,10 @@ export default function CanceledInvoicesPage() {
                     {getSortIcon('invoiceNumber')}
                   </button>
                 </TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                {user?.role !== 'ACCOUNTANT' && (
+                  <TableHead className="whitespace-nowrap">Payment Status</TableHead>
+                )}
                 <TableHead className="whitespace-nowrap">
                   <button
                     onClick={() => handleSort('issueDate')}
@@ -410,6 +431,7 @@ export default function CanceledInvoicesPage() {
                 <TableHead className="whitespace-nowrap">Currency</TableHead>
                 <TableHead className="whitespace-nowrap">Cancellation Reason</TableHead>
                 <TableHead className="whitespace-nowrap">Created By</TableHead>
+                <TableHead className="whitespace-nowrap">Notes</TableHead>
                 <TableHead className="whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -418,7 +440,7 @@ export default function CanceledInvoicesPage() {
                 // Loading skeletons
                 Array.from({ length: 5 }).map((_, index) => (
                   <TableRow key={index}>
-                    {Array.from({ length: 12 }).map((_, cellIndex) => (
+                    {Array.from({ length: user?.role === 'ACCOUNTANT' ? 14 : 15 }).map((_, cellIndex) => (
                       <TableCell key={cellIndex}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -428,7 +450,7 @@ export default function CanceledInvoicesPage() {
               ) : invoices.length === 0 ? (
                 // Empty state
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-12">
+                  <TableCell colSpan={user?.role === 'ACCOUNTANT' ? 14 : 15} className="text-center py-12">
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="h-12 w-12 text-muted-foreground" />
                       <p className="text-lg font-medium">No canceled invoices found</p>
@@ -453,16 +475,33 @@ export default function CanceledInvoicesPage() {
                         {invoice.invoiceNumber}
                       </button>
                     </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="destructive">
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    {user?.role !== 'ACCOUNTANT' && (
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const { variant, className } = getPaymentStatusBadge((invoice as any).paymentStatus || 'UNPAID');
+                          return (
+                            <Badge variant={variant} className={className}>
+                              {(invoice as any).paymentStatus || 'UNPAID'}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-nowrap">{formatDate(invoice.createdAt)}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {invoice.canceledAt ? formatDate(invoice.canceledAt) : '-'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {invoice.buyer ? (
-                        <TooltipProvider delayDuration={200}>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="cursor-help">
+                              <span className="cursor-pointer">
                                 {invoice.buyer.name.length > 30
                                   ? `${invoice.buyer.name.substring(0, 30)}...`
                                   : invoice.buyer.name}
@@ -482,10 +521,10 @@ export default function CanceledInvoicesPage() {
                             ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
                             : 'Individual';
                           return fullName.length > 30 ? (
-                            <TooltipProvider delayDuration={200}>
+                            <TooltipProvider delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="cursor-help">
+                                  <span className="cursor-pointer">
                                     {fullName.substring(0, 30)}...
                                   </span>
                                 </TooltipTrigger>
@@ -543,22 +582,44 @@ export default function CanceledInvoicesPage() {
                       </TooltipProvider>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{(invoice as any).user?.fullName || invoice.createdBy?.fullName || '-'}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <TooltipProvider>
+                    <TableCell className="max-w-[150px]">
+                      {(invoice as any).notes ? (
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </Button>
+                              <span className="cursor-pointer truncate block">
+                                {(invoice as any).notes.length > 30
+                                  ? `${(invoice as any).notes.substring(0, 30)}...`
+                                  : (invoice as any).notes}
+                              </span>
                             </TooltipTrigger>
-                            <TooltipContent>Download PDF</TooltipContent>
+                            <TooltipContent className="max-w-xs whitespace-pre-wrap">
+                              {(invoice as any).notes}
+                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        {permissions.canDownloadPdf && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
+                                >
+                                  <FileDown className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Download PDF</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

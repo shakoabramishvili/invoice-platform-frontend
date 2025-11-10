@@ -4,7 +4,7 @@ export interface User {
   email: string;
   fullName: string;
   phone?: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'ACCOUNTANT' | 'VIEWER';
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
@@ -272,7 +272,7 @@ export interface UserFormData {
   fullName: string;
   email: string;
   phone?: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'ACCOUNTANT' | 'VIEWER';
   password?: string;
   status: 'ACTIVE' | 'INACTIVE';
 }

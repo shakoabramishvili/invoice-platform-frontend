@@ -312,10 +312,10 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {invoice.buyer ? (
-                          <TooltipProvider delayDuration={200}>
+                          <TooltipProvider delayDuration={100}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="cursor-help">
+                                <span className="cursor-pointer">
                                   {invoice.buyer.name.length > 30
                                     ? `${invoice.buyer.name.substring(0, 30)}...`
                                     : invoice.buyer.name}
@@ -335,10 +335,10 @@ export default function DashboardPage() {
                               ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
                               : 'Individual';
                             return fullName.length > 30 ? (
-                              <TooltipProvider delayDuration={200}>
+                              <TooltipProvider delayDuration={100}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span className="cursor-help">
+                                    <span className="cursor-pointer">
                                       {fullName.substring(0, 30)}...
                                     </span>
                                   </TooltipTrigger>

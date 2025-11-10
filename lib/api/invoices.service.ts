@@ -94,6 +94,16 @@ export const invoicesService = {
   },
 
   /**
+   * Update invoice payment status
+   */
+  updatePaymentStatus: async (id: string, paymentStatus: string): Promise<ApiResponse<Invoice>> => {
+    const response = await apiClient.patch<ApiResponse<Invoice>>(`/invoices/${id}/payment-status`, {
+      paymentStatus,
+    });
+    return response.data;
+  },
+
+  /**
    * Duplicate invoice
    */
   duplicate: async (id: string): Promise<ApiResponse<Invoice>> => {

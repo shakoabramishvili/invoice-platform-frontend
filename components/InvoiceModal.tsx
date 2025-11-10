@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ const invoiceSchema = z.object({
   currencyFrom: z.string().min(1, 'Currency is required'),
   buyerId: z.string().optional(),
   sellerId: z.string().min(1, 'Supplier is required'),
+  bankId: z.string().optional(),
   passengers: z.array(passengerSchema),
   products: z.array(productSchema).min(1, 'At least one product is required'),
   discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
@@ -95,6 +97,7 @@ export default function InvoiceModal({
 }: InvoiceModalProps) {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [availableBanks, setAvailableBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [sellerSearch, setSellerSearch] = useState('');
@@ -118,6 +121,7 @@ export default function InvoiceModal({
       currencyFrom: 'USD',
       buyerId: '',
       sellerId: '',
+      bankId: '',
       passengers: [],
       products: [],
       discountType: 'FIXED_AMOUNT',
@@ -153,6 +157,7 @@ export default function InvoiceModal({
   const watchCurrencyFrom = watch('currencyFrom');
   const watchCurrencyTo = watch('currencyTo');
   const watchLegalType = watch('legalType');
+  const watchSellerId = watch('sellerId');
 
   useEffect(() => {
     fetchBuyers();
@@ -166,6 +171,27 @@ export default function InvoiceModal({
       setSellerSearch('');
     }
   }, [isOpen]);
+
+  // Update available banks when seller changes
+  useEffect(() => {
+    if (watchSellerId) {
+      const selectedSeller = sellers.find(s => s.id === watchSellerId);
+      if (selectedSeller && selectedSeller.banks) {
+        setAvailableBanks(selectedSeller.banks);
+        // If editing and bank exists, set it; otherwise set first bank as default
+        if (!invoice && selectedSeller.banks.length > 0) {
+          const defaultBank = selectedSeller.banks.find(b => b.isDefault) || selectedSeller.banks[0];
+          setValue('bankId', defaultBank.id);
+        }
+      } else {
+        setAvailableBanks([]);
+        setValue('bankId', '');
+      }
+    } else {
+      setAvailableBanks([]);
+      setValue('bankId', '');
+    }
+  }, [watchSellerId, sellers, setValue, invoice]);
 
 
   useEffect(() => {
@@ -189,6 +215,7 @@ export default function InvoiceModal({
         currencyFrom: (invoice as any).currencyFrom,
         buyerId: invoice.buyer?.id || '',
         sellerId: invoice.seller.id,
+        bankId: (invoice as any).bankId || '',
         passengers: (invoice.passengers || []).map((p: any) => ({
           gender: p.gender,
           firstName: p.firstName,
@@ -295,6 +322,7 @@ export default function InvoiceModal({
       // Format the data to match API expectations
       const formData: any = {
         sellerId: data.sellerId,
+        ...(data.bankId ? { bankId: data.bankId } : {}),
         legalType: data.legalType,
         ...(data.legalType === 'LEGAL_ENTITY' && data.buyerId ? { buyerId: data.buyerId } : {}),
         issueDate: data.issueDate instanceof Date
@@ -597,6 +625,42 @@ export default function InvoiceModal({
                   )}
                 </div>
               </div>
+
+              {/* Bank Selection */}
+              {watchSellerId && availableBanks.length > 0 && (
+                <div className="mt-4">
+                  <Label htmlFor="bankId">Bank Account</Label>
+                  <Controller
+                    control={control}
+                    name="bankId"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bank account" />
+                        </SelectTrigger>
+                        <SelectContent align="start">
+                          {availableBanks.map((bank) => (
+                            <SelectItem key={bank.id} value={bank.id}>
+                              <div className="flex flex-col text-left">
+                                <span className="font-medium">{bank.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {bank.accountNumber}
+                                  {bank.isDefault && <span className="ml-2 text-green-600">(Default)</span>}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.bankId && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.bankId.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -981,6 +1045,32 @@ export default function InvoiceModal({
                     </span>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 6: Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                <Controller
+                  control={control}
+                  name="notes"
+                  render={({ field }) => (
+                    <Textarea
+                      id="notes"
+                      placeholder="Enter any additional notes or comments about this invoice..."
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      rows={4}
+                      className="resize-none"
+                    />
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

@@ -357,10 +357,10 @@ export default function BuyersPage() {
               buyers.map((buyer) => (
                 <TableRow key={buyer.id}>
                   <TableCell className="whitespace-nowrap">
-                    <TooltipProvider delayDuration={200}>
+                    <TooltipProvider delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="cursor-help">
+                          <span className="cursor-pointer">
                             {buyer.name.length > 30
                               ? `${buyer.name.substring(0, 30)}...`
                               : buyer.name}
