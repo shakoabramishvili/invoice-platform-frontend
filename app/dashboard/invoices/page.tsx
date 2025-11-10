@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Download, FileDown, FileText, Edit, XCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Calendar as CalendarIcon, X, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Download, FileDown, FileText, Edit, XCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Calendar as CalendarIcon, X, AlertTriangle, CheckCircle, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,8 +43,11 @@ import InvoiceModal from '@/components/InvoiceModal';
 import InvoiceDetailModal from '@/components/InvoiceDetailModal';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { usePermissions, useUser } from '@/hooks/use-permissions';
 
 export default function InvoicesPage() {
+  const permissions = usePermissions();
+  const user = useUser();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,6 +198,28 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleUpdatePaymentStatus = async (invoice: Invoice) => {
+    try {
+      await invoicesService.updatePaymentStatus(invoice.id, 'PAID');
+      toast.success('Payment status updated to PAID');
+      fetchInvoices();
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Failed to update payment status');
+    }
+  };
+
+  const handleUpdateStatus = async (invoice: Invoice) => {
+    try {
+      await invoicesService.updateStatus(invoice.id, 'ISSUED');
+      toast.success('Invoice status updated to ISSUED');
+      fetchInvoices();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Failed to update status');
+    }
+  };
+
   const handleExport = async () => {
     try {
       toast.info('Exporting invoices...');
@@ -259,20 +284,34 @@ export default function InvoicesPage() {
   // Check if we're on the last page
   const isLastPage = currentPage >= totalPages;
 
-  const getStatusVariant = (status: string) => {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ISSUED':
+        return { variant: 'default' as const, className: 'bg-green-600 hover:bg-green-700 text-white border-transparent' };
+      case 'PAID':
+        return { variant: 'default' as const, className: 'bg-green-600 hover:bg-green-700 text-white border-transparent' };
+      case 'PENDING':
+        return { variant: 'secondary' as const, className: '' };
+      case 'OVERDUE':
+        return { variant: 'destructive' as const, className: '' };
+      case 'DRAFT':
+        return { variant: 'outline' as const, className: '' };
+      case 'CANCELED':
+        return { variant: 'destructive' as const, className: '' };
+      default:
+        return { variant: 'outline' as const, className: '' };
+    }
+  };
+
+  const getPaymentStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID':
-        return 'default';
+        return { variant: 'default' as const, className: 'bg-green-600 hover:bg-green-700 text-white border-transparent' };
+      case 'UNPAID':
       case 'PENDING':
-        return 'secondary';
-      case 'OVERDUE':
-        return 'destructive';
-      case 'DRAFT':
-        return 'outline';
-      case 'CANCELED':
-        return 'destructive';
+        return { variant: 'destructive' as const, className: '' };
       default:
-        return 'outline';
+        return { variant: 'secondary' as const, className: '' };
     }
   };
 
@@ -285,14 +324,18 @@ export default function InvoicesPage() {
           <p className="text-muted-foreground">View and manage your invoices easily.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export to Excel
-          </Button>
-          <Button onClick={handleCreateInvoice}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invoice
-          </Button>
+          {permissions.canExportExcel && (
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+          )}
+          {permissions.canCreateInvoice && (
+            <Button onClick={handleCreateInvoice}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Invoice
+            </Button>
+          )}
         </div>
       </div>
 
@@ -460,6 +503,10 @@ export default function InvoicesPage() {
                     {getSortIcon('invoiceNumber')}
                   </button>
                 </TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                {user?.role !== 'ACCOUNTANT' && (
+                  <TableHead className="whitespace-nowrap">Payment Status</TableHead>
+                )}
                 <TableHead className="whitespace-nowrap">
                   <button
                     onClick={() => handleSort('issueDate')}
@@ -486,6 +533,7 @@ export default function InvoicesPage() {
                 <TableHead className="whitespace-nowrap">Passenger</TableHead>
                 <TableHead className="whitespace-nowrap">Due Date</TableHead>
                 <TableHead className="whitespace-nowrap">Created By</TableHead>
+                <TableHead className="whitespace-nowrap">Notes</TableHead>
                 <TableHead className="whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -494,7 +542,7 @@ export default function InvoicesPage() {
                 // Loading skeletons
                 Array.from({ length: 5 }).map((_, index) => (
                   <TableRow key={index}>
-                    {Array.from({ length: 12 }).map((_, cellIndex) => (
+                    {Array.from({ length: user?.role === 'ACCOUNTANT' ? 14 : 15 }).map((_, cellIndex) => (
                       <TableCell key={cellIndex}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -504,7 +552,7 @@ export default function InvoicesPage() {
               ) : invoices.length === 0 ? (
                 // Empty state
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-12">
+                  <TableCell colSpan={user?.role === 'ACCOUNTANT' ? 14 : 15} className="text-center py-12">
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="h-12 w-12 text-muted-foreground" />
                       <p className="text-lg font-medium">No invoices found</p>
@@ -533,13 +581,35 @@ export default function InvoicesPage() {
                         {invoice.invoiceNumber}
                       </button>
                     </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {(() => {
+                        const { variant, className } = getStatusBadge(invoice.status);
+                        return (
+                          <Badge variant={variant} className={className}>
+                            {invoice.status}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+                    {user?.role !== 'ACCOUNTANT' && (
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const { variant, className } = getPaymentStatusBadge((invoice as any).paymentStatus || 'UNPAID');
+                          return (
+                            <Badge variant={variant} className={className}>
+                              {(invoice as any).paymentStatus || 'UNPAID'}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-nowrap">{formatDate(invoice.createdAt)}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {invoice.buyer ? (
-                        <TooltipProvider delayDuration={200}>
+                        <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="cursor-help">
+                              <span className="cursor-pointer">
                                 {invoice.buyer.name.length > 30
                                   ? `${invoice.buyer.name.substring(0, 30)}...`
                                   : invoice.buyer.name}
@@ -559,10 +629,10 @@ export default function InvoicesPage() {
                             ? `${mainPassenger.firstName} ${mainPassenger.lastName}`
                             : 'Individual';
                           return fullName.length > 30 ? (
-                            <TooltipProvider delayDuration={200}>
+                            <TooltipProvider delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="cursor-help">
+                                  <span className="cursor-pointer">
                                     {fullName.substring(0, 30)}...
                                   </span>
                                 </TooltipTrigger>
@@ -616,52 +686,114 @@ export default function InvoicesPage() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{invoice.dueDate ? formatDate(invoice.dueDate) : '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">{(invoice as any).user?.fullName || invoice.createdBy?.fullName || '-'}</TableCell>
+                    <TableCell className="max-w-[150px]">
+                      {(invoice as any).notes ? (
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-pointer truncate block">
+                                {(invoice as any).notes.length > 30
+                                  ? `${(invoice as any).notes.substring(0, 30)}...`
+                                  : (invoice as any).notes}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs whitespace-pre-wrap">
+                              {(invoice as any).notes}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Download PDF</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditInvoice(invoice)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Edit</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        {invoice.status !== 'CANCELED' && (
+                        {permissions.canDownloadPdf && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleCancelInvoice(invoice)}
-                                  className="text-destructive"
+                                  onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
                                 >
-                                  <XCircle className="h-4 w-4" />
+                                  <FileDown className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Cancel</TooltipContent>
+                              <TooltipContent>Download PDF</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                        )}
+                        {permissions.canEditInvoice && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditInvoice(invoice)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {invoice.status !== 'CANCELED' && (
+                          <>
+                            {permissions.canUpdatePaymentStatus && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleUpdatePaymentStatus(invoice)}
+                                      className="text-green-600 hover:text-green-700"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Mark as Paid</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {permissions.canUpdateInvoiceStatus && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleUpdateStatus(invoice)}
+                                      className="text-green-600 hover:text-green-700"
+                                    >
+                                      <FileCheck className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Mark as Issued</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {permissions.canCancelInvoice && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleCancelInvoice(invoice)}
+                                      className="text-destructive"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Cancel</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>

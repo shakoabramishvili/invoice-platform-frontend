@@ -20,6 +20,7 @@ import { invoicesService } from '@/lib/api/invoices.service';
 import { Invoice } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface InvoiceDetailModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function InvoiceDetailModal({
   onEdit,
   onSuccess,
 }: InvoiceDetailModalProps) {
+  const permissions = usePermissions();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -167,42 +169,50 @@ export default function InvoiceDetailModal({
           <div className="flex items-center justify-between">
             <DialogTitle>Invoice Details</DialogTitle>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadPdf}
-                disabled={isDownloadingPdf}
-              >
-                {isDownloadingPdf ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
+              {permissions.canDownloadPdf && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                >
+                  {isDownloadingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              )}
+              {permissions.canDownloadPdf && (
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              )}
               {invoice.status !== 'CANCELED' && (
                 <>
-                  <Button variant="outline" size="sm" onClick={handleEdit}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleCancelClick}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancel Invoice
-                  </Button>
+                  {permissions.canEditInvoice && (
+                    <Button variant="outline" size="sm" onClick={handleEdit}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  )}
+                  {permissions.canCancelInvoice && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleCancelClick}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancel Invoice
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -412,6 +422,18 @@ export default function InvoiceDetailModal({
               </div>
             </CardContent>
           </Card>
+
+          {/* Section 6: Notes */}
+          {(invoice as any).notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{(invoice as any).notes}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <DialogFooter>
