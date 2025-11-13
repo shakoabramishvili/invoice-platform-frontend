@@ -354,7 +354,9 @@ export default function DashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(invoice.grandTotal, invoice.currency)}
+                        {typeof invoice.grandTotal === 'number'
+                          ? invoice.grandTotal.toFixed(2)
+                          : Number(invoice.grandTotal || 0).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-gray-700 dark:text-gray-300">
