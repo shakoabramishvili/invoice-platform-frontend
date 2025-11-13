@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, Calendar, X } from 'lucide-react';
+import { Trash2, Plus, Calendar, X, Copy } from 'lucide-react';
 import { invoicesService } from '@/lib/api/invoices.service';
 import { buyersService } from '@/lib/api/buyers.service';
 import { sellersService } from '@/lib/api/sellers.service';
@@ -56,6 +56,7 @@ const invoiceSchema = z.object({
   }),
   showLogo: z.boolean(),
   showStamp: z.boolean(),
+  showTermsAndConditions: z.boolean(),
   currencyFrom: z.string().min(1, 'Currency is required'),
   buyerId: z.string().optional(),
   sellerId: z.string().min(1, 'Supplier is required'),
@@ -118,6 +119,7 @@ export default function InvoiceModal({
       legalType: 'LEGAL_ENTITY',
       showLogo: true,
       showStamp: true,
+      showTermsAndConditions: true,
       currencyFrom: 'USD',
       buyerId: '',
       sellerId: '',
@@ -212,6 +214,7 @@ export default function InvoiceModal({
         legalType: invoice.buyer?.id ? 'LEGAL_ENTITY' : 'INDIVIDUAL',
         showLogo: invoice.showLogo,
         showStamp: invoice.showStamp,
+        showTermsAndConditions: (invoice as any).showTermsAndConditions ?? true,
         currencyFrom: (invoice as any).currencyFrom,
         buyerId: invoice.buyer?.id || '',
         sellerId: invoice.seller.id,
@@ -340,6 +343,7 @@ export default function InvoiceModal({
         grandTotal: (data.currencyTo && data.exchangeRate) ? grandTotal : totalAfterDiscount,
         showLogo: data.showLogo,
         showStamp: data.showStamp,
+        showTermsAndConditions: data.showTermsAndConditions,
         description: data.description || '',
         notes: data.notes || '',
         termsAndConditions: data.termsAndConditions || '',
@@ -668,22 +672,52 @@ export default function InvoiceModal({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Passengers</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  appendPassenger({
-                    gender: 'MR',
-                    firstName: '',
-                    lastName: '',
-                    birthDate: '',
-                  })
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Passenger
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const lastPassenger = passengerFields[passengerFields.length - 1];
+                    if (lastPassenger) {
+                      const lastPassengerData = watch(`passengers.${passengerFields.length - 1}`);
+                      appendPassenger({
+                        gender: lastPassengerData.gender || 'MR',
+                        firstName: lastPassengerData.firstName || '',
+                        lastName: lastPassengerData.lastName || '',
+                        birthDate: lastPassengerData.birthDate || '',
+                      });
+                    } else {
+                      appendPassenger({
+                        gender: 'MR',
+                        firstName: '',
+                        lastName: '',
+                        birthDate: '',
+                      });
+                    }
+                  }}
+                  disabled={passengerFields.length === 0}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Passenger
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    appendPassenger({
+                      gender: 'MR',
+                      firstName: '',
+                      lastName: '',
+                      birthDate: '',
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Passenger
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {passengerFields.map((field, index) => (
@@ -691,6 +725,11 @@ export default function InvoiceModal({
                   key={field.id}
                   className="flex gap-3 p-4 border rounded-lg items-end"
                 >
+                  <div className="flex items-center justify-center pb-2">
+                    <span className="font-semibold text-lg text-muted-foreground">
+                      {index + 1}.
+                    </span>
+                  </div>
                   <div style={{ width: '10%' }}>
                     <Label>Title</Label>
                     <Controller
@@ -752,22 +791,55 @@ export default function InvoiceModal({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Products</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  appendProduct({
-                    description: '',
-                    quantity: 1,
-                    price: 0,
-                    total: 0,
-                  })
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const lastProduct = productFields[productFields.length - 1];
+                    if (lastProduct) {
+                      const lastProductData = watch(`products.${productFields.length - 1}`);
+                      appendProduct({
+                        description: lastProductData.description || '',
+                        direction: lastProductData.direction || '',
+                        departureDate: lastProductData.departureDate || '',
+                        arrivalDate: lastProductData.arrivalDate || '',
+                        quantity: lastProductData.quantity || 1,
+                        price: lastProductData.price || 0,
+                        total: lastProductData.total || 0,
+                      });
+                    } else {
+                      appendProduct({
+                        description: '',
+                        quantity: 1,
+                        price: 0,
+                        total: 0,
+                      });
+                    }
+                  }}
+                  disabled={productFields.length === 0}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Product
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    appendProduct({
+                      description: '',
+                      quantity: 1,
+                      price: 0,
+                      total: 0,
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {productFields.map((field, index) => (
@@ -775,101 +847,109 @@ export default function InvoiceModal({
                   key={field.id}
                   className="p-4 border rounded-lg space-y-3"
                 >
-                  {/* First line: Description, Direction */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Description</Label>
-                      <Input
-                        {...register(`products.${index}.description`)}
-                        placeholder="Product description"
-                      />
-                      {errors.products?.[index]?.description && (
-                        <p className="text-sm text-destructive mt-1">
-                          {errors.products[index]?.description?.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Direction</Label>
-                      <Input
-                        {...register(`products.${index}.direction`)}
-                        placeholder="Direction"
-                      />
-                    </div>
-                  </div>
+                  {/* Numeric label */}
+                  <div className="flex items-start gap-3">
+                    <span className="font-semibold text-lg text-muted-foreground pt-6">
+                      {index + 1}.
+                    </span>
+                    <div className="flex-1 space-y-3">
+                      {/* First line: Description, Direction */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Description</Label>
+                          <Input
+                            {...register(`products.${index}.description`)}
+                            placeholder="Product description"
+                          />
+                          {errors.products?.[index]?.description && (
+                            <p className="text-sm text-destructive mt-1">
+                              {errors.products[index]?.description?.message}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label>Direction</Label>
+                          <Input
+                            {...register(`products.${index}.direction`)}
+                            placeholder="Direction"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Second line: Departure, Arrival, Quantity, Price, Total, Remove */}
-                  <div className="flex gap-3 items-end">
-                    <div style={{ width: '20%' }}>
-                      <Label>Departure</Label>
-                      <Input
-                        type="date"
-                        {...register(`products.${index}.departureDate`)}
-                      />
-                    </div>
-                    <div style={{ width: '20%' }}>
-                      <Label>Arrival</Label>
-                      <Input
-                        type="date"
-                        {...register(`products.${index}.arrivalDate`)}
-                      />
-                    </div>
-                    <div style={{ width: '15%' }}>
-                      <Label>Quantity</Label>
-                      <Controller
-                        control={control}
-                        name={`products.${index}.quantity`}
-                        render={({ field }) => (
+                      {/* Second line: Departure, Arrival, Quantity, Price, Total, Remove */}
+                      <div className="flex gap-3 items-end">
+                        <div style={{ width: '20%' }}>
+                          <Label>Departure</Label>
                           <Input
-                            value={field.value || ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || !isNaN(Number(value))) {
-                                field.onChange(value === '' ? 0 : Number(value));
-                              }
-                            }}
-                            placeholder="1"
+                            type="date"
+                            {...register(`products.${index}.departureDate`)}
                           />
-                        )}
-                      />
-                    </div>
-                    <div style={{ width: '20%' }}>
-                      <Label>Price</Label>
-                      <Controller
-                        control={control}
-                        name={`products.${index}.price`}
-                        render={({ field }) => (
+                        </div>
+                        <div style={{ width: '20%' }}>
+                          <Label>Arrival</Label>
                           <Input
-                            type="number"
-                            step="0.01"
-                            value={field.value || ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                            }}
-                            placeholder="0.00"
+                            type="date"
+                            {...register(`products.${index}.arrivalDate`)}
                           />
-                        )}
-                      />
-                    </div>
-                    <div style={{ width: '20%' }}>
-                      <Label>Total</Label>
-                      <Input
-                        value={(watchProducts[index]?.quantity * watchProducts[index]?.price || 0).toFixed(2)}
-                        readOnly
-                        disabled
-                        className="bg-muted"
-                      />
-                    </div>
-                    <div style={{ width: '5%' }}>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeProduct(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        </div>
+                        <div style={{ width: '15%' }}>
+                          <Label>Quantity</Label>
+                          <Controller
+                            control={control}
+                            name={`products.${index}.quantity`}
+                            render={({ field }) => (
+                              <Input
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || !isNaN(Number(value))) {
+                                    field.onChange(value === '' ? 0 : Number(value));
+                                  }
+                                }}
+                                placeholder="1"
+                              />
+                            )}
+                          />
+                        </div>
+                        <div style={{ width: '20%' }}>
+                          <Label>Price</Label>
+                          <Controller
+                            control={control}
+                            name={`products.${index}.price`}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                                }}
+                                placeholder="0.00"
+                              />
+                            )}
+                          />
+                        </div>
+                        <div style={{ width: '20%' }}>
+                          <Label>Total</Label>
+                          <Input
+                            value={(watchProducts[index]?.quantity * watchProducts[index]?.price || 0).toFixed(2)}
+                            readOnly
+                            disabled
+                            className="bg-muted"
+                          />
+                        </div>
+                        <div style={{ width: '5%' }}>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeProduct(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1064,6 +1144,45 @@ export default function InvoiceModal({
                     <Textarea
                       id="notes"
                       placeholder="Enter any additional notes or comments about this invoice..."
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      rows={4}
+                      className="resize-none"
+                    />
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 7: Terms and Conditions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Terms and Conditions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Controller
+                  control={control}
+                  name="showTermsAndConditions"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label>Show Terms and Conditions</Label>
+              </div>
+              <div>
+                <Label htmlFor="termsAndConditions">Terms and Conditions (Optional)</Label>
+                <Controller
+                  control={control}
+                  name="termsAndConditions"
+                  render={({ field }) => (
+                    <Textarea
+                      id="termsAndConditions"
+                      placeholder="Enter terms and conditions for this invoice..."
                       value={field.value || ''}
                       onChange={field.onChange}
                       rows={4}

@@ -310,18 +310,31 @@ export default function InvoiceDetailModal({
                 <CardTitle>Passengers</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Header row with titles */}
+                <div className="grid grid-cols-3 gap-4 pb-2 border-b">
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Gender</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Full Name</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-muted-foreground">Date of Birth</p>
+                  </div>
+                </div>
+                {/* Data rows */}
                 {invoice.passengers.map((passenger, index) => (
                   <div key={index} className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Gender</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-lg text-muted-foreground">
+                        {index + 1}.
+                      </span>
                       <p className="font-medium">{passenger.gender}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Full Name</p>
                       <p className="font-medium">{passenger.firstName} {passenger.lastName}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Date of Birth</p>
                       <p className="font-medium">
                         {(passenger as any).birthDate ? formatDate((passenger as any).birthDate) : 'N/A'}
                       </p>
@@ -338,36 +351,57 @@ export default function InvoiceDetailModal({
               <CardTitle>Products</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Header row with titles */}
+              <div className="grid grid-cols-7 gap-4 pb-2 border-b">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Description</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Direction</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Departure Date</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Arrival Date</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Quantity</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Price</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Total</p>
+                </div>
+              </div>
+              {/* Data rows */}
               {invoice.products.map((product, index) => (
                 <div key={index} className="grid grid-cols-7 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Description</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-lg text-muted-foreground">
+                      {index + 1}.
+                    </span>
                     <p className="font-medium">{product.description}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Direction</p>
                     <p className="font-medium">{product.direction || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Departure Date</p>
                     <p className="font-medium">{product.departureDate ? formatDate(product.departureDate) : '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Arrival Date</p>
                     <p className="font-medium">{product.arrivalDate ? formatDate(product.arrivalDate) : '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Quantity</p>
                     <p className="font-medium">{product.quantity}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Price</p>
                     <p className="font-medium">
                       {typeof product.price === 'number' ? product.price.toFixed(2) : Number(product.price || 0).toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
                     <p className="font-medium">
                       {typeof product.total === 'number' ? product.total.toFixed(2) : Number(product.total || 0).toFixed(2)}
                     </p>
@@ -431,6 +465,18 @@ export default function InvoiceDetailModal({
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{(invoice as any).notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Section 7: Terms and Conditions */}
+          {(invoice as any).showTermsAndConditions && (invoice as any).termsAndConditions && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Terms and Conditions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{(invoice as any).termsAndConditions}</p>
               </CardContent>
             </Card>
           )}
