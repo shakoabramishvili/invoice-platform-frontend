@@ -40,7 +40,10 @@ export interface Buyer {
 export interface Bank {
   id: string;
   name: string;
-  accountNumber: string;
+  accountNumber?: string; // Legacy field, keep for backward compatibility
+  accountNumberGEL?: string;
+  accountNumberUSD?: string;
+  accountNumberEUR?: string;
   address?: string;
   swift?: string;
   intermediaryBankName?: string;
@@ -304,7 +307,10 @@ export interface SellerFormData {
   banks: Array<{
     id?: string;
     name: string;
-    accountNumber: string;
+    accountNumber?: string; // Legacy field, keep for backward compatibility
+    accountNumberGEL?: string;
+    accountNumberUSD?: string;
+    accountNumberEUR?: string;
     address?: string;
     swift?: string;
     intermediaryBankName?: string;
