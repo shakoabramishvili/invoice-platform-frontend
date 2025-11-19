@@ -101,7 +101,9 @@ const sellerSchema = z.object({
   banks: z.array(z.object({
     id: z.string().optional(),
     name: z.string().min(1, 'Bank name is required'),
-    accountNumber: z.string().min(1, 'Account number is required'),
+    accountNumberGEL: z.string().optional(),
+    accountNumberUSD: z.string().optional(),
+    accountNumberEUR: z.string().optional(),
     address: z.string().optional(),
     swift: z.string().optional(),
     intermediaryBankName: z.string().optional(),
@@ -151,7 +153,9 @@ export default function SellersPage() {
       taxId: '',
       banks: [{
         name: '',
-        accountNumber: '',
+        accountNumberGEL: '',
+        accountNumberUSD: '',
+        accountNumberEUR: '',
         address: '',
         swift: '',
         intermediaryBankName: '',
@@ -172,7 +176,9 @@ export default function SellersPage() {
       replace(editingSeller.banks.map(bank => ({
         id: bank.id,
         name: bank.name,
-        accountNumber: bank.accountNumber,
+        accountNumberGEL: (bank as any).accountNumberGEL || '',
+        accountNumberUSD: (bank as any).accountNumberUSD || '',
+        accountNumberEUR: (bank as any).accountNumberEUR || '',
         address: bank.address || '',
         swift: bank.swift || '',
         intermediaryBankName: bank.intermediaryBankName || '',
@@ -184,7 +190,9 @@ export default function SellersPage() {
     } else if (isModalOpen && !editingSeller) {
       replace([{
         name: '',
-        accountNumber: '',
+        accountNumberGEL: '',
+        accountNumberUSD: '',
+        accountNumberEUR: '',
         address: '',
         swift: '',
         intermediaryBankName: '',
@@ -271,7 +279,9 @@ export default function SellersPage() {
         banks: seller.banks && seller.banks.length > 0 ? seller.banks.map(bank => ({
           id: bank.id,
           name: bank.name,
-          accountNumber: bank.accountNumber,
+          accountNumberGEL: (bank as any).accountNumberGEL || '',
+          accountNumberUSD: (bank as any).accountNumberUSD || '',
+          accountNumberEUR: (bank as any).accountNumberEUR || '',
           address: bank.address || '',
           swift: bank.swift || '',
           intermediaryBankName: bank.intermediaryBankName || '',
@@ -279,7 +289,9 @@ export default function SellersPage() {
           isDefault: bank.isDefault || false,
         })) : [{
           name: '',
-          accountNumber: '',
+          accountNumberGEL: '',
+          accountNumberUSD: '',
+          accountNumberEUR: '',
           address: '',
           swift: '',
           intermediaryBankName: '',
@@ -303,7 +315,9 @@ export default function SellersPage() {
         taxId: '',
         banks: [{
           name: '',
-          accountNumber: '',
+          accountNumberGEL: '',
+          accountNumberUSD: '',
+          accountNumberEUR: '',
           address: '',
           swift: '',
           intermediaryBankName: '',
@@ -977,7 +991,9 @@ export default function SellersPage() {
                     const newIndex = fields.length;
                     append({
                       name: '',
-                      accountNumber: '',
+                      accountNumberGEL: '',
+                      accountNumberUSD: '',
+                      accountNumberEUR: '',
                       address: '',
                       swift: '',
                       intermediaryBankName: '',
@@ -1053,34 +1069,62 @@ export default function SellersPage() {
                     {/* Bank Details - Collapsible */}
                     {isExpanded && (
                       <div className="px-4 pb-4 space-y-4 border-t pt-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor={`banks.${index}.accountNumber`}>Account Number *</Label>
+                            <Label htmlFor={`banks.${index}.accountNumberGEL`}>Account Number GEL</Label>
                             <Input
-                              id={`banks.${index}.accountNumber`}
-                              {...register(`banks.${index}.accountNumber` as const)}
+                              id={`banks.${index}.accountNumberGEL`}
+                              {...register(`banks.${index}.accountNumberGEL` as const)}
                               placeholder="GE29NB0000000101904917"
                             />
-                            {errors.banks?.[index]?.accountNumber && (
+                            {errors.banks?.[index]?.accountNumberGEL && (
                               <p className="text-sm text-destructive">
-                                {errors.banks[index]?.accountNumber?.message}
+                                {errors.banks[index]?.accountNumberGEL?.message}
                               </p>
                             )}
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor={`banks.${index}.swift`}>SWIFT/BIC</Label>
+                            <Label htmlFor={`banks.${index}.accountNumberUSD`}>Account Number USD</Label>
                             <Input
-                              id={`banks.${index}.swift`}
-                              {...register(`banks.${index}.swift` as const)}
-                              placeholder="BAGAGE22"
+                              id={`banks.${index}.accountNumberUSD`}
+                              {...register(`banks.${index}.accountNumberUSD` as const)}
+                              placeholder="GE29NB0000000101904918"
                             />
-                            {errors.banks?.[index]?.swift && (
+                            {errors.banks?.[index]?.accountNumberUSD && (
                               <p className="text-sm text-destructive">
-                                {errors.banks[index]?.swift?.message}
+                                {errors.banks[index]?.accountNumberUSD?.message}
                               </p>
                             )}
                           </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`banks.${index}.accountNumberEUR`}>Account Number EUR</Label>
+                            <Input
+                              id={`banks.${index}.accountNumberEUR`}
+                              {...register(`banks.${index}.accountNumberEUR` as const)}
+                              placeholder="GE29NB0000000101904919"
+                            />
+                            {errors.banks?.[index]?.accountNumberEUR && (
+                              <p className="text-sm text-destructive">
+                                {errors.banks[index]?.accountNumberEUR?.message}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`banks.${index}.swift`}>SWIFT/BIC</Label>
+                          <Input
+                            id={`banks.${index}.swift`}
+                            {...register(`banks.${index}.swift` as const)}
+                            placeholder="BAGAGE22"
+                          />
+                          {errors.banks?.[index]?.swift && (
+                            <p className="text-sm text-destructive">
+                              {errors.banks[index]?.swift?.message}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
