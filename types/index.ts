@@ -194,6 +194,68 @@ export interface CurrencyRates {
   nbg?: BankRates;
 }
 
+// Sales Report types
+export interface SalesReport {
+  id: string;
+  issueDate: Date | string;
+  productName: string | null;
+  ticketNumber: string | null;
+  pnr: string | null;
+  airlineCompany: string | null;
+  passenger: string | null;
+  destination: string | null;
+  departureArrivalDate: Date | string | null;
+  fare: number | null;
+  net: number | null;
+  serviceFee: number | null;
+  totalAmount: number | null;
+  invoiceNumber: string | null;
+  provider: string | null;
+  buyer: string | null;
+  comment: string | null;
+  createdBy: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  deletedAt: Date | string | null;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+}
+
+export interface SalesReportFilters {
+  page?: number;
+  limit?: number;
+  invoiceNumber?: string;
+  passenger?: string;
+  buyer?: string;
+  provider?: string;
+  productName?: string;
+  issueDateFrom?: string; // ISO date string
+  issueDateTo?: string;   // ISO date string
+  search?: string;
+}
+
+export interface SalesReportFormData {
+  issueDate: Date | string;
+  productName?: string;
+  ticketNumber?: string;
+  pnr?: string;
+  airlineCompany?: string;
+  passenger?: string;
+  destination?: string;
+  departureArrivalDate?: Date | string;
+  fare?: number;
+  net?: number;
+  serviceFee?: number;
+  totalAmount?: number;
+  invoiceNumber?: string;
+  provider?: string;
+  buyer?: string;
+  comment?: string;
+}
+
 // Settings types
 export interface Settings {
   companyName: string;

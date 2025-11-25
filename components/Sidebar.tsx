@@ -16,6 +16,7 @@ import {
   Building2,
   X,
   ArrowLeftToLine,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,11 @@ const navItems: NavItem[] = [
     title: 'Canceled Invoices',
     href: '/dashboard/invoices/canceled',
     icon: FileX,
+  },
+  {
+    title: 'Sales Report',
+    href: '/dashboard/sales-report',
+    icon: BarChart3,
   },
   {
     title: 'Administrator',
